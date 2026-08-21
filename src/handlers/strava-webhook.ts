@@ -10,16 +10,7 @@ import {
 } from "../domain/strava-event.js";
 import { jsonResponse } from "../http/responses.js";
 import { enqueueActivityEvent } from "../queues/activity-queue.js";
-
-function rawBody(event: APIGatewayProxyEventV2): string {
-  if (event.body === undefined) {
-    return "";
-  }
-
-  return event.isBase64Encoded
-    ? Buffer.from(event.body, "base64").toString("utf8")
-    : event.body;
-}
+import { rawBody } from "../utils/raw-body.js";
 
 async function handleVerification(
   event: APIGatewayProxyEventV2,

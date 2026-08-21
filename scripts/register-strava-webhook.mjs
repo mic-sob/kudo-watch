@@ -2,6 +2,22 @@ import {
   GetSecretValueCommand,
   SecretsManagerClient,
 } from "@aws-sdk/client-secrets-manager";
+import { z } from "zod";
+
+const stravaSecretSchema = z.object({
+  stravaClientId: z.string().min(1),
+  stravaClientSecret: z.string().min(1),
+  stravaWebhookVerifyToken: z.string().min(1),
+});
+const callbackUrlSchema = z.url();
+const stravaSubscriptionSchema = z.object({
+  id: z.number().int().nonnegative(),
+  callback_url: z.url(),
+});
+const stravaSubscriptionsSchema = z.array(stravaSubscriptionSchema);
+const createdStravaSubscriptionSchema = z.object({
+  id: z.number().int().nonnegative(),
+});
 
 const [secretId, callbackUrl] = process.argv.slice(2);
 
@@ -10,6 +26,8 @@ if (!secretId || !callbackUrl) {
     "Usage: node scripts/register-strava-webhook.mjs SECRET_ARN CALLBACK_URL",
   );
 }
+
+const validatedCallbackUrl = callbackUrlSchema.parse(callbackUrl);
 
 const secretsManager = new SecretsManagerClient({ region: "eu-central-1" });
 const secret = await secretsManager.send(
@@ -20,20 +38,11 @@ if (!secret.SecretString) {
   throw new Error("The application secret does not contain a string value.");
 }
 
-const parsed = JSON.parse(secret.SecretString);
-const clientId = parsed.stravaClientId;
-const clientSecret = parsed.stravaClientSecret;
-const verifyToken = parsed.stravaWebhookVerifyToken;
-
-for (const [name, value] of Object.entries({
+const {
   stravaClientId: clientId,
   stravaClientSecret: clientSecret,
   stravaWebhookVerifyToken: verifyToken,
-})) {
-  if (typeof value !== "string" || value.length === 0) {
-    throw new Error(`The application secret is missing field: ${name}`);
-  }
-}
+} = stravaSecretSchema.parse(JSON.parse(secret.SecretString));
 
 const subscriptionsUrl = new URL(
   "https://www.strava.com/api/v3/push_subscriptions",
@@ -48,13 +57,12 @@ if (!listResponse.ok) {
   );
 }
 
-const subscriptions = await listResponse.json();
-if (!Array.isArray(subscriptions)) {
-  throw new Error("Strava returned an invalid subscription list.");
-}
+const subscriptions = stravaSubscriptionsSchema.parse(
+  await listResponse.json(),
+);
 
 const matching = subscriptions.find(
-  (subscription) => subscription.callback_url === callbackUrl,
+  (subscription) => subscription.callback_url === validatedCallbackUrl,
 );
 if (matching) {
   console.log(`Webhook Stravy jest już aktywny (subscription ID: ${matching.id}).`);
@@ -73,7 +81,7 @@ if (subscriptions.length > 0) {
 const body = new URLSearchParams({
   client_id: clientId,
   client_secret: clientSecret,
-  callback_url: callbackUrl,
+  callback_url: validatedCallbackUrl,
   verify_token: verifyToken,
 });
 
@@ -93,5 +101,7 @@ if (!createResponse.ok) {
   );
 }
 
-const subscription = await createResponse.json();
+const subscription = createdStravaSubscriptionSchema.parse(
+  await createResponse.json(),
+);
 console.log(`Utworzono webhook Stravy (subscription ID: ${subscription.id}).`);

@@ -2,52 +2,25 @@ import {
   GetSecretValueCommand,
   SecretsManagerClient,
 } from "@aws-sdk/client-secrets-manager";
+import { z } from "zod";
+import { nonEmptyString, parseJson } from "../utils/validation.js";
 
-export interface ApplicationSecrets {
-  readonly discordBotToken: string;
-  readonly discordPublicKey: string;
-  readonly discordWebhookUrl: string;
-  readonly stravaClientId: string;
-  readonly stravaClientSecret: string;
-  readonly stravaWebhookVerifyToken: string;
-}
+const applicationSecretsSchema = z.object({
+  discordBotToken: nonEmptyString,
+  discordPublicKey: nonEmptyString,
+  discordWebhookUrl: nonEmptyString,
+  stravaClientId: nonEmptyString,
+  stravaClientSecret: nonEmptyString,
+  stravaWebhookVerifyToken: nonEmptyString,
+});
+
+export type ApplicationSecrets = z.infer<typeof applicationSecretsSchema>;
 
 const client = new SecretsManagerClient({});
 let cachedSecrets: ApplicationSecrets | undefined;
 
-function requiredString(
-  value: Readonly<Record<string, unknown>>,
-  key: keyof ApplicationSecrets,
-): string {
-  const field = value[key];
-
-  if (typeof field !== "string" || field.length === 0) {
-    throw new Error(`The application secret is missing field: ${key}`);
-  }
-
-  return field;
-}
-
 function parseSecrets(secretString: string): ApplicationSecrets {
-  const parsed: unknown = JSON.parse(secretString);
-
-  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
-    throw new Error("The application secret must be a JSON object.");
-  }
-
-  const value = parsed as Readonly<Record<string, unknown>>;
-
-  return {
-    discordBotToken: requiredString(value, "discordBotToken"),
-    discordPublicKey: requiredString(value, "discordPublicKey"),
-    discordWebhookUrl: requiredString(value, "discordWebhookUrl"),
-    stravaClientId: requiredString(value, "stravaClientId"),
-    stravaClientSecret: requiredString(value, "stravaClientSecret"),
-    stravaWebhookVerifyToken: requiredString(
-      value,
-      "stravaWebhookVerifyToken",
-    ),
-  };
+  return parseJson(applicationSecretsSchema, secretString);
 }
 
 export async function getApplicationSecrets(

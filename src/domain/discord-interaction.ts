@@ -1,38 +1,40 @@
-export interface DiscordUser {
-  readonly id: string;
-  readonly username: string;
-  readonly global_name?: string | null;
-}
+import { z } from "zod";
+import { nonEmptyString, parseJson } from "../utils/validation.js";
 
-export interface DiscordInteraction {
-  readonly type: number;
-  readonly guild_id?: string;
-  readonly data?: {
-    readonly name?: string;
-    readonly options?: readonly {
-      readonly type?: number;
-      readonly name?: string;
-    }[];
-  };
-  readonly member?: {
-    readonly nick?: string | null;
-    readonly user?: DiscordUser;
-  };
-}
+const discordInteractionSchema = z.object({
+  type: z.number().int(),
+  guild_id: nonEmptyString.optional(),
+  data: z
+    .object({
+      name: nonEmptyString.optional(),
+      options: z
+        .array(
+          z.object({
+            type: z.number().int().optional(),
+            name: nonEmptyString.optional(),
+          }),
+        )
+        .optional(),
+    })
+    .optional(),
+  member: z
+    .object({
+      nick: z.string().nullable().optional(),
+      user: z
+        .object({
+          id: nonEmptyString,
+          username: nonEmptyString,
+          global_name: z.string().nullable().optional(),
+        })
+        .optional(),
+    })
+    .optional(),
+});
+
+export type DiscordInteraction = z.infer<typeof discordInteractionSchema>;
 
 export function parseDiscordInteraction(body: string): DiscordInteraction {
-  const parsed: unknown = JSON.parse(body);
-
-  if (
-    typeof parsed !== "object" ||
-    parsed === null ||
-    Array.isArray(parsed) ||
-    typeof (parsed as { readonly type?: unknown }).type !== "number"
-  ) {
-    throw new Error("Invalid Discord interaction format.");
-  }
-
-  return parsed as DiscordInteraction;
+  return parseJson(discordInteractionSchema, body);
 }
 
 export function isStravaConnectCommand(

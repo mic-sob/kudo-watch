@@ -8,11 +8,34 @@ import {
   TransactWriteCommand,
   UpdateCommand,
 } from "@aws-sdk/lib-dynamodb";
+import { z } from "zod";
 import type { AccountLink } from "../domain/account-link.js";
 import type { OAuthSession } from "../domain/oauth-session.js";
+import { nonEmptyString } from "../utils/validation.js";
 
 const documentClient = DynamoDBDocumentClient.from(new DynamoDBClient({}), {
   marshallOptions: { removeUndefinedValues: true },
+});
+
+const oauthSessionItemSchema = z.object({
+  discordUserId: nonEmptyString,
+  discordGuildId: nonEmptyString,
+  discordDisplayName: nonEmptyString,
+  expiresAt: z.number().int().nonnegative(),
+});
+
+const accountLinkSchema = z.object({
+  discordUserId: nonEmptyString,
+  discordGuildId: nonEmptyString,
+  discordDisplayName: nonEmptyString,
+  stravaAthleteId: z.number().int().nonnegative(),
+  stravaDisplayName: nonEmptyString,
+  status: z.enum(["active", "inactive"]),
+  encryptedAccessToken: nonEmptyString,
+  encryptedRefreshToken: nonEmptyString,
+  accessTokenExpiresAt: z.number().int().nonnegative(),
+  createdAt: nonEmptyString,
+  updatedAt: nonEmptyString,
 });
 
 const linkKey = (discordUserId: string) => ({
@@ -382,57 +405,21 @@ export class AccountRepository {
     state: string,
     item: Record<string, unknown> | undefined,
   ): OAuthSession | undefined {
-    if (
-      item === undefined ||
-      typeof item.discordUserId !== "string" ||
-      typeof item.discordGuildId !== "string" ||
-      typeof item.discordDisplayName !== "string" ||
-      typeof item.expiresAt !== "number"
-    ) {
+    const result = oauthSessionItemSchema.safeParse(item);
+    if (!result.success) {
       return undefined;
     }
 
     return {
       state,
-      discordUserId: item.discordUserId,
-      discordGuildId: item.discordGuildId,
-      discordDisplayName: item.discordDisplayName,
-      expiresAt: item.expiresAt,
+      ...result.data,
     };
   }
 
   private parseAccountLink(
     item: Record<string, unknown> | undefined,
   ): AccountLink | undefined {
-    if (
-      item === undefined ||
-      typeof item.discordUserId !== "string" ||
-      typeof item.discordGuildId !== "string" ||
-      typeof item.discordDisplayName !== "string" ||
-      typeof item.stravaAthleteId !== "number" ||
-      typeof item.stravaDisplayName !== "string" ||
-      (item.status !== "active" && item.status !== "inactive") ||
-      typeof item.encryptedAccessToken !== "string" ||
-      typeof item.encryptedRefreshToken !== "string" ||
-      typeof item.accessTokenExpiresAt !== "number" ||
-      typeof item.createdAt !== "string" ||
-      typeof item.updatedAt !== "string"
-    ) {
-      return undefined;
-    }
-
-    return {
-      discordUserId: item.discordUserId,
-      discordGuildId: item.discordGuildId,
-      discordDisplayName: item.discordDisplayName,
-      stravaAthleteId: item.stravaAthleteId,
-      stravaDisplayName: item.stravaDisplayName,
-      status: item.status,
-      encryptedAccessToken: item.encryptedAccessToken,
-      encryptedRefreshToken: item.encryptedRefreshToken,
-      accessTokenExpiresAt: item.accessTokenExpiresAt,
-      createdAt: item.createdAt,
-      updatedAt: item.updatedAt,
-    };
+    const result = accountLinkSchema.safeParse(item);
+    return result.success ? result.data : undefined;
   }
 }

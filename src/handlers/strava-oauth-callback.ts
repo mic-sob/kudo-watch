@@ -9,7 +9,7 @@ import {
 } from "../clients/strava-client.js";
 import { readEnvironment } from "../config/environment.js";
 import { getApplicationSecrets } from "../config/secrets.js";
-import { decryptToken, encryptToken } from "../crypto/token-encryption.js";
+import { decryptToken, encryptToken } from "../utils/token-encryption.js";
 import type { AccountLink } from "../domain/account-link.js";
 import {
   authorizationErrorPage,

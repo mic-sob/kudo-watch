@@ -1,6 +1,6 @@
 import { refreshStravaToken } from "../clients/strava-client.js";
 import type { ApplicationSecrets } from "../config/secrets.js";
-import { decryptToken, encryptToken } from "../crypto/token-encryption.js";
+import { decryptToken, encryptToken } from "../utils/token-encryption.js";
 import type { AccountLink } from "../domain/account-link.js";
 import { AccountRepository } from "../repositories/account-repository.js";
 

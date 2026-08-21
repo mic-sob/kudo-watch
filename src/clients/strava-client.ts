@@ -1,12 +1,61 @@
-import type {
-  StravaAthlete,
-  StravaTokenExchange,
-} from "../domain/strava-auth.js";
+import { z } from "zod";
+import type { StravaTokenExchange } from "../domain/strava-auth.js";
 import type { StravaActivity } from "../domain/strava-activity.js";
+import { nonEmptyString } from "../utils/validation.js";
 
 const STRAVA_AUTHORIZE_URL = "https://www.strava.com/oauth/authorize";
 const STRAVA_TOKEN_URL = "https://www.strava.com/api/v3/oauth/token";
 const STRAVA_REVOKE_URL = "https://www.strava.com/oauth/revoke";
+const stravaAthleteSchema = z.object({
+  id: z.number().int().nonnegative(),
+  firstname: nonEmptyString,
+  lastname: nonEmptyString,
+});
+
+const stravaTokenSchema = z.object({
+  access_token: nonEmptyString,
+  refresh_token: nonEmptyString,
+  expires_at: z.number().int().nonnegative(),
+});
+
+const stravaTokenExchangeSchema = stravaTokenSchema.extend({
+  athlete: stravaAthleteSchema,
+});
+
+const stravaActivitySchema = z
+  .object({
+    id: z.number().int().nonnegative(),
+    name: nonEmptyString,
+    sport_type: nonEmptyString.optional(),
+    type: nonEmptyString.optional(),
+    distance: z.number().finite().optional(),
+    moving_time: z.number().finite().optional(),
+    total_elevation_gain: z.number().finite().optional(),
+    average_speed: z.number().finite().optional(),
+    start_date: nonEmptyString,
+  })
+  .transform((activity, context): StravaActivity => {
+    const sportType = activity.sport_type ?? activity.type;
+    if (sportType === undefined) {
+      context.addIssue({
+        code: "custom",
+        path: ["sport_type"],
+        message: "Expected sport_type or type.",
+      });
+      return z.NEVER;
+    }
+
+    return {
+      id: activity.id,
+      name: activity.name,
+      sportType,
+      distance: activity.distance,
+      movingTime: activity.moving_time,
+      totalElevationGain: activity.total_elevation_gain,
+      averageSpeed: activity.average_speed,
+      startDate: activity.start_date,
+    };
+  });
 
 export function buildStravaAuthorizationUrl(input: {
   readonly clientId: string;
@@ -21,53 +70,6 @@ export function buildStravaAuthorizationUrl(input: {
   url.searchParams.set("scope", "activity:read_all");
   url.searchParams.set("state", input.state);
   return url.toString();
-}
-
-function requiredString(
-  value: Readonly<Record<string, unknown>>,
-  key: string,
-): string {
-  const field = value[key];
-  if (typeof field !== "string" || field.length === 0) {
-    throw new Error(`Strava response is missing field: ${key}`);
-  }
-
-  return field;
-}
-
-function requiredNumber(
-  value: Readonly<Record<string, unknown>>,
-  key: string,
-): number {
-  const field = value[key];
-  if (typeof field !== "number" || !Number.isFinite(field)) {
-    throw new Error(`Strava response is missing field: ${key}`);
-  }
-
-  return field;
-}
-
-function optionalNumber(
-  value: Readonly<Record<string, unknown>>,
-  key: string,
-): number | undefined {
-  const field = value[key];
-  return typeof field === "number" && Number.isFinite(field)
-    ? field
-    : undefined;
-}
-
-function parseAthlete(value: unknown): StravaAthlete {
-  if (typeof value !== "object" || value === null || Array.isArray(value)) {
-    throw new Error("Strava response does not contain athlete data.");
-  }
-
-  const athlete = value as Readonly<Record<string, unknown>>;
-  return {
-    id: requiredNumber(athlete, "id"),
-    firstname: requiredString(athlete, "firstname"),
-    lastname: requiredString(athlete, "lastname"),
-  };
 }
 
 export async function exchangeStravaAuthorizationCode(input: {
@@ -93,17 +95,12 @@ export async function exchangeStravaAuthorizationCode(input: {
     throw new Error(`Strava rejected the OAuth code exchange: ${response.status}.`);
   }
 
-  const parsed: unknown = await response.json();
-  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
-    throw new Error("Strava returned an invalid OAuth response.");
-  }
-
-  const value = parsed as Readonly<Record<string, unknown>>;
+  const value = stravaTokenExchangeSchema.parse(await response.json());
   return {
-    accessToken: requiredString(value, "access_token"),
-    refreshToken: requiredString(value, "refresh_token"),
-    expiresAt: requiredNumber(value, "expires_at"),
-    athlete: parseAthlete(value.athlete),
+    accessToken: value.access_token,
+    refreshToken: value.refresh_token,
+    expiresAt: value.expires_at,
+    athlete: value.athlete,
   };
 }
 
@@ -129,16 +126,11 @@ export async function refreshStravaToken(input: {
     throw new Error(`Strava rejected the token refresh: ${response.status}.`);
   }
 
-  const parsed: unknown = await response.json();
-  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
-    throw new Error("Strava returned an invalid token refresh response.");
-  }
-
-  const value = parsed as Readonly<Record<string, unknown>>;
+  const value = stravaTokenSchema.parse(await response.json());
   return {
-    accessToken: requiredString(value, "access_token"),
-    refreshToken: requiredString(value, "refresh_token"),
-    expiresAt: requiredNumber(value, "expires_at"),
+    accessToken: value.access_token,
+    refreshToken: value.refresh_token,
+    expiresAt: value.expires_at,
   };
 }
 
@@ -158,27 +150,7 @@ export async function getStravaActivity(input: {
     throw new Error(`Strava did not return the activity: ${response.status}.`);
   }
 
-  const parsed: unknown = await response.json();
-  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
-    throw new Error("Strava returned invalid activity data.");
-  }
-
-  const value = parsed as Readonly<Record<string, unknown>>;
-  const sportType =
-    typeof value.sport_type === "string"
-      ? value.sport_type
-      : requiredString(value, "type");
-
-  return {
-    id: requiredNumber(value, "id"),
-    name: requiredString(value, "name"),
-    sportType,
-    distance: optionalNumber(value, "distance"),
-    movingTime: optionalNumber(value, "moving_time"),
-    totalElevationGain: optionalNumber(value, "total_elevation_gain"),
-    averageSpeed: optionalNumber(value, "average_speed"),
-    startDate: requiredString(value, "start_date"),
-  };
+  return stravaActivitySchema.parse(await response.json());
 }
 
 export async function revokeStravaAuthorization(input: {

@@ -2,6 +2,17 @@ import {
   GetSecretValueCommand,
   SecretsManagerClient,
 } from "@aws-sdk/client-secrets-manager";
+import { z } from "zod";
+
+const discordSecretSchema = z.object({
+  discordBotToken: z.string().min(1),
+});
+const discordApplicationSchema = z.object({
+  id: z.string().min(1),
+});
+const discordCommandSchema = z.object({
+  id: z.string().min(1),
+});
 
 const [secretId, guildId] = process.argv.slice(2);
 
@@ -20,12 +31,9 @@ if (!secret.SecretString) {
   throw new Error("The application secret does not contain a string value.");
 }
 
-const parsed = JSON.parse(secret.SecretString);
-const botToken = parsed.discordBotToken;
-
-if (typeof botToken !== "string" || botToken.length === 0) {
-  throw new Error("The application secret does not contain a Discord bot token.");
-}
+const { discordBotToken: botToken } = discordSecretSchema.parse(
+  JSON.parse(secret.SecretString),
+);
 
 const headers = {
   authorization: `Bot ${botToken}`,
@@ -43,10 +51,9 @@ if (!applicationResponse.ok) {
   );
 }
 
-const application = await applicationResponse.json();
-if (typeof application.id !== "string") {
-  throw new Error("Discord did not return an application ID.");
-}
+const application = discordApplicationSchema.parse(
+  await applicationResponse.json(),
+);
 
 const commandResponse = await fetch(
   `https://discord.com/api/v10/applications/${application.id}/guilds/${guildId}/commands`,
@@ -74,5 +81,5 @@ if (!commandResponse.ok) {
   );
 }
 
-const command = await commandResponse.json();
+const command = discordCommandSchema.parse(await commandResponse.json());
 console.log(`Zarejestrowano /strava connect (command ID: ${command.id}).`);

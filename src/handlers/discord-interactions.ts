@@ -6,7 +6,7 @@ import type {
 import { isDiscordGuildMember } from "../clients/discord-client.js";
 import { readEnvironment } from "../config/environment.js";
 import { getApplicationSecrets } from "../config/secrets.js";
-import { verifyDiscordSignature } from "../crypto/discord-signature.js";
+import { verifyDiscordSignature } from "../utils/discord-signature.js";
 import {
   discordDisplayName,
   isStravaConnectCommand,
@@ -14,19 +14,10 @@ import {
 } from "../domain/discord-interaction.js";
 import { jsonResponse } from "../http/responses.js";
 import { AccountRepository } from "../repositories/account-repository.js";
+import { rawBody } from "../utils/raw-body.js";
 
 const OAUTH_LINK_LIFETIME_SECONDS = 10 * 60;
 const EPHEMERAL_MESSAGE_FLAG = 64;
-
-function rawBody(event: APIGatewayProxyEventV2): string {
-  if (event.body === undefined) {
-    return "";
-  }
-
-  return event.isBase64Encoded
-    ? Buffer.from(event.body, "base64").toString("utf8")
-    : event.body;
-}
 
 function ephemeralMessage(content: string): APIGatewayProxyStructuredResultV2 {
   return jsonResponse(200, {

@@ -7,7 +7,7 @@ import {
 } from "../clients/strava-client.js";
 import { readEnvironment } from "../config/environment.js";
 import { getApplicationSecrets } from "../config/secrets.js";
-import { decryptToken } from "../crypto/token-encryption.js";
+import { decryptToken } from "../utils/token-encryption.js";
 import {
   isActivityCreateEvent,
   parseStravaWebhookEvent,
