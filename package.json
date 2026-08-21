@@ -1,0 +1,33 @@
+{
+  "name": "kudowatch",
+  "version": "0.1.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "description": "Publikowanie aktywności Strava członków serwera na Discordzie.",
+  "packageManager": "pnpm@11.22.0",
+  "engines": {
+    "node": ">=24 <25",
+    "pnpm": ">=11 <12"
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "clean": "node scripts/clean.mjs",
+    "discord:register": "node scripts/register-discord-command.mjs",
+    "strava:webhook:register": "node scripts/register-strava-webhook.mjs",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "8.10.162",
+    "@types/node": "24.13.3",
+    "esbuild": "0.28.1",
+    "typescript": "7.0.2"
+  },
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.1114.0",
+    "@aws-sdk/client-kms": "^3.1114.0",
+    "@aws-sdk/client-secrets-manager": "^3.1114.0",
+    "@aws-sdk/client-sqs": "^3.1114.0",
+    "@aws-sdk/lib-dynamodb": "^3.1114.0"
+  }
+}

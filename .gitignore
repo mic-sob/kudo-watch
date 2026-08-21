@@ -1,0 +1,15 @@
+node_modules/
+.pnpm-store/
+.tools/
+dist/
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+*.tflock
+*.tflock.info
+infra/app/build/*.zip
+.env
+.env.*
+!.env.example
+.DS_Store
