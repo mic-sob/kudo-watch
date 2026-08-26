@@ -35,6 +35,13 @@ The `infra/app` configuration creates DynamoDB, KMS, SQS with a dead-letter
 queue, Secrets Manager, Lambda functions, IAM roles, API Gateway, and the event
 source mapping between SQS and the activity worker.
 
+## GitHub Actions deployment
+
+The [`github`](github/README.md) stack creates the restricted AWS IAM role used
+by GitHub Actions through OIDC. Pushes to `main` build the application and
+produce a Terraform plan. Pushing any tag repeats those checks and applies the
+saved plan automatically.
+
 ## Application secret value
 
 After Terraform creates the secret, set its value outside Terraform as the

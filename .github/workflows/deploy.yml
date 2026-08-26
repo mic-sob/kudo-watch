@@ -1,0 +1,86 @@
+name: Build, plan, and deploy
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - "*"
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: terraform-production
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: eu-central-1
+  TF_IN_AUTOMATION: "true"
+  TF_INPUT: "false"
+
+jobs:
+  terraform:
+    name: Terraform production
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: 11.22.0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Type-check
+        run: pnpm typecheck
+
+      - name: Build Lambda packages
+        run: pnpm build
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: 1.15.9
+          terraform_wrapper: false
+
+      - name: Check Terraform formatting
+        run: terraform fmt -check -recursive infra
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+          allowed-account-ids: "628270103507"
+          role-session-name: kudowatch-${{ github.run_id }}
+
+      - name: Initialize Terraform
+        run: >-
+          terraform -chdir=infra/app init
+          -backend-config="bucket=${{ vars.TF_STATE_BUCKET }}"
+
+      - name: Validate Terraform
+        run: terraform -chdir=infra/app validate
+
+      - name: Create Terraform plan
+        run: >-
+          terraform -chdir=infra/app plan
+          -var="discord_guild_id=${{ vars.DISCORD_GUILD_ID }}"
+          -out=kudowatch.tfplan
+
+      - name: Apply Terraform plan
+        if: startsWith(github.ref, 'refs/tags/')
+        run: terraform -chdir=infra/app apply kudowatch.tfplan
