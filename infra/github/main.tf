@@ -5,10 +5,10 @@ data "aws_iam_openid_connect_provider" "github" {
 }
 
 locals {
-  account_id        = var.aws_account_id
-  application_name  = "kudowatch-production"
-  github_oidc_host  = "token.actions.githubusercontent.com"
-  github_repository = "${var.github_owner}/${var.github_repository}"
+  account_id                = var.aws_account_id
+  application_name          = "kudowatch-production"
+  github_oidc_host          = "token.actions.githubusercontent.com"
+  github_repository_subject = "${var.github_owner}@${var.github_owner_id}/${var.github_repository}@${var.github_repository_id}"
 }
 
 data "aws_iam_policy_document" "github_assume_role" {
@@ -31,7 +31,7 @@ data "aws_iam_policy_document" "github_assume_role" {
     condition {
       test     = "StringEquals"
       variable = "${local.github_oidc_host}:sub"
-      values   = ["repo:${local.github_repository}:environment:${var.github_environment}"]
+      values   = ["repo:${local.github_repository_subject}:environment:${var.github_environment}"]
     }
   }
 }

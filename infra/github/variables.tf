@@ -22,10 +22,22 @@ variable "github_owner" {
   default     = "mic-sob"
 }
 
+variable "github_owner_id" {
+  description = "Immutable GitHub ID of the repository owner."
+  type        = string
+  default     = "8579445"
+}
+
 variable "github_repository" {
   description = "Name of the GitHub repository."
   type        = string
   default     = "kudo-watch"
+}
+
+variable "github_repository_id" {
+  description = "Immutable GitHub repository ID."
+  type        = string
+  default     = "1341738037"
 }
 
 variable "state_bucket_name" {

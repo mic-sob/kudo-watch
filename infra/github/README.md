@@ -4,6 +4,11 @@ This Terraform stack creates the IAM role assumed by the KudoWatch deployment
 workflow. It uses the existing GitHub Actions OIDC provider and stores its own
 state separately from both the bootstrap and application states.
 
+The role trusts GitHub's immutable OIDC subject for this repository:
+`repo:mic-sob@8579445/kudo-watch@1341738037:environment:production`. GitHub
+uses owner and repository IDs in the default subject for repositories created
+after July 15, 2026.
+
 Initialize and apply the stack once using local AWS credentials:
 
 ```bash
