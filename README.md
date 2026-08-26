@@ -83,7 +83,8 @@ Set the secret value manually as the following JSON object:
   "discordWebhookUrl": "...",
   "stravaClientId": "...",
   "stravaClientSecret": "...",
-  "stravaWebhookVerifyToken": "..."
+  "stravaWebhookVerifyToken": "...",
+  "stadiaMapsApiKey": "..."
 }
 ```
 
@@ -97,6 +98,7 @@ The fields contain:
 | `stravaClientId` | Strava API application settings, **Client ID** |
 | `stravaClientSecret` | Strava API application settings, **Client Secret** |
 | `stravaWebhookVerifyToken` | A random value generated for webhook verification |
+| `stadiaMapsApiKey` | Stadia Maps client dashboard, **Authentication Configuration → API key** |
 
 Generate a webhook verification token with:
 

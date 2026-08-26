@@ -22,6 +22,18 @@ const stravaTokenExchangeSchema = stravaTokenSchema.extend({
   athlete: stravaAthleteSchema,
 });
 
+const polylineMapSchema = z
+  .object({
+    id: nonEmptyString,
+    polyline: z.string().nullable().optional(),
+    summary_polyline: z.string().nullable().optional(),
+  })
+  .transform((map) => ({
+    id: map.id,
+    polyline: map.polyline || undefined,
+    summaryPolyline: map.summary_polyline || undefined,
+  }));
+
 const stravaActivitySchema = z
   .object({
     id: z.number().int().nonnegative(),
@@ -33,6 +45,7 @@ const stravaActivitySchema = z
     total_elevation_gain: z.number().finite().optional(),
     average_speed: z.number().finite().optional(),
     start_date: nonEmptyString,
+    map: polylineMapSchema.nullable().optional(),
   })
   .transform((activity, context): StravaActivity => {
     const sportType = activity.sport_type ?? activity.type;
@@ -54,6 +67,7 @@ const stravaActivitySchema = z
       totalElevationGain: activity.total_elevation_gain,
       averageSpeed: activity.average_speed,
       startDate: activity.start_date,
+      map: activity.map ?? undefined,
     };
   });
 

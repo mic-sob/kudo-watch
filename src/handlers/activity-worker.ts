@@ -1,6 +1,7 @@
 import type { SQSBatchResponse, SQSEvent } from "aws-lambda";
 import { isDiscordGuildMember } from "../clients/discord-client.js";
 import { publishDiscordActivity } from "../clients/discord-webhook-client.js";
+import { getStadiaActivityMap } from "../clients/stadia-maps-client.js";
 import {
   getStravaActivity,
   revokeStravaAuthorization,
@@ -15,6 +16,8 @@ import {
 import { buildActivityEmbed } from "../messages/activity-message.js";
 import { AccountRepository } from "../repositories/account-repository.js";
 import { getValidStravaAccessToken } from "../services/strava-access.js";
+
+const ACTIVITY_MAP_FILENAME = "activity-map.png";
 
 async function processRecord(body: string): Promise<void> {
   const event = parseStravaWebhookEvent(body);
@@ -71,9 +74,35 @@ async function processRecord(body: string): Promise<void> {
       accessToken,
       activityId: event.object_id,
     });
+
+    console.log('Activity', JSON.stringify(activity));
+
+    const polyline =
+      activity.map?.polyline ?? activity.map?.summaryPolyline;
+    const mapImage =
+      polyline === undefined
+        ? undefined
+        : await getStadiaActivityMap({
+            apiKey: secrets.stadiaMapsApiKey,
+            polyline,
+          });
+
     await publishDiscordActivity({
       webhookUrl: secrets.discordWebhookUrl,
-      embed: buildActivityEmbed(link, activity),
+      embed: buildActivityEmbed(
+        link,
+        activity,
+        mapImage === undefined ? undefined : ACTIVITY_MAP_FILENAME,
+      ),
+      ...(mapImage === undefined
+        ? {}
+        : {
+            attachment: {
+              data: mapImage,
+              filename: ACTIVITY_MAP_FILENAME,
+              contentType: "image/png",
+            },
+          }),
     });
     await repository.markActivityPublished(event.object_id);
   } catch (error) {

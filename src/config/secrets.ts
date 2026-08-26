@@ -12,6 +12,7 @@ const applicationSecretsSchema = z.object({
   stravaClientId: nonEmptyString,
   stravaClientSecret: nonEmptyString,
   stravaWebhookVerifyToken: nonEmptyString,
+  stadiaMapsApiKey: nonEmptyString,
 });
 
 export type ApplicationSecrets = z.infer<typeof applicationSecretsSchema>;

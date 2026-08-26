@@ -13,6 +13,7 @@ export interface DiscordEmbed {
   readonly title: string;
   readonly url: string;
   readonly fields: readonly DiscordEmbedField[];
+  readonly image?: { readonly url: string };
 }
 
 const PACE_ACTIVITY_TYPES = new Set([
@@ -65,6 +66,7 @@ function field(name: string, value: string): DiscordEmbedField {
 export function buildActivityEmbed(
   link: AccountLink,
   activity: StravaActivity,
+  mapImageFilename: string | undefined,
 ): DiscordEmbed {
   const fields: DiscordEmbedField[] = [
     field("Typ", ACTIVITY_NAMES[activity.sportType] ?? activity.sportType),
@@ -78,37 +80,44 @@ export function buildActivityEmbed(
     ),
   ];
 
-  if (activity.distance !== undefined && activity.distance > 0) {
+  const activityHasDistance = activity.distance !== undefined && activity.distance > 0
+  if (activityHasDistance) {
     fields.push(field("Dystans", `${(activity.distance / 1_000).toFixed(2)} km`));
   }
 
-  if (activity.movingTime !== undefined && activity.movingTime > 0) {
+  const activityHasMovingTime = activity.movingTime !== undefined && activity.movingTime > 0
+  if (activityHasMovingTime) {
     fields.push(field("Czas ruchu", formatDuration(activity.movingTime)));
   }
 
-  if (
-    PACE_ACTIVITY_TYPES.has(activity.sportType) &&
+  const activityHasPace = PACE_ACTIVITY_TYPES.has(activity.sportType) &&
     activity.movingTime !== undefined &&
-    activity.distance !== undefined
-  ) {
+    activity.distance !== undefined;
+
+  const activityHasAverageSpeed = activity.averageSpeed !== undefined && activity.averageSpeed > 0
+
+  if (activityHasPace) {
     const pace = formatPace(activity.movingTime, activity.distance);
     if (pace !== undefined) {
       fields.push(field("Tempo", pace));
     }
-  } else if (activity.averageSpeed !== undefined && activity.averageSpeed > 0) {
+  } else if (activityHasAverageSpeed) {
     fields.push(
       field("Średnia prędkość", `${(activity.averageSpeed * 3.6).toFixed(1)} km/h`),
     );
   }
 
-  if (
-    activity.totalElevationGain !== undefined &&
-    activity.totalElevationGain > 0
-  ) {
+  const activityHasElevation = activity.totalElevationGain !== undefined && activity.totalElevationGain > 0
+  if (activityHasElevation) {
     fields.push(
       field("Przewyższenie", `${Math.round(activity.totalElevationGain)} m`),
     );
   }
+
+  const image =
+    mapImageFilename === undefined
+      ? undefined
+      : { url: `attachment://${mapImageFilename}` };
 
   return {
     color: 0xfc4c02,
@@ -118,6 +127,6 @@ export function buildActivityEmbed(
     title: activity.name,
     url: `https://www.strava.com/activities/${activity.id}`,
     fields,
+    ...(image === undefined ? {} : { image }),
   };
 }
-
