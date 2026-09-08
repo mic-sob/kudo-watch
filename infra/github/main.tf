@@ -263,6 +263,7 @@ data "aws_iam_policy_document" "github_deployment" {
       "secretsmanager:TagResource",
       "secretsmanager:UntagResource",
       "secretsmanager:UpdateSecret",
+      "secretsmanager:GetResourcePolicy",
     ]
     resources = ["arn:aws:secretsmanager:${var.aws_region}:${local.account_id}:secret:${local.application_name}-*"]
   }
@@ -306,6 +307,7 @@ data "aws_iam_policy_document" "github_deployment" {
       "iam:TagRole",
       "iam:UntagRole",
       "iam:UpdateAssumeRolePolicy",
+      "iam:ListAttachedRolePolicies",
     ]
     resources = ["arn:aws:iam::${local.account_id}:role/${local.application_name}-*"]
   }
