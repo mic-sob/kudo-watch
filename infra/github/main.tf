@@ -227,6 +227,8 @@ data "aws_iam_policy_document" "github_deployment" {
       "lambda:GetEventSourceMapping",
       "lambda:ListEventSourceMappings",
       "lambda:UpdateEventSourceMapping",
+      "lambda:ListTags",
+      "lambda:UpdateEventSourceMapping",
     ]
     resources = ["*"]
   }
