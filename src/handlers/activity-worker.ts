@@ -75,8 +75,6 @@ async function processRecord(body: string): Promise<void> {
       activityId: event.object_id,
     });
 
-    console.log('Activity', JSON.stringify(activity));
-
     const polyline =
       activity.map?.polyline ?? activity.map?.summaryPolyline;
     const mapImage =

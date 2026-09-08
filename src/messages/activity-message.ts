@@ -24,6 +24,26 @@ const PACE_ACTIVITY_TYPES = new Set([
   "Hike",
 ]);
 
+const PERSONAL_RECORD_ACTIVITY_TYPES = new Set([
+  "Run",
+  "TrailRun",
+  "VirtualRun",
+  "Ride",
+  "EBikeRide",
+  "EMountainBikeRide",
+  "Handcycle",
+  "MountainBikeRide",
+  "GravelRide",
+  "Velomobile",
+  "VirtualRide",
+]);
+
+const PERSONAL_RECORD_MEDALS = {
+  1: "🥇",
+  2: "🥈",
+  3: "🥉",
+} as const;
+
 const ACTIVITY_NAMES: Readonly<Record<string, string>> = {
   Run: "Bieg",
   TrailRun: "Bieg terenowy",
@@ -112,6 +132,23 @@ export function buildActivityEmbed(
     fields.push(
       field("Przewyższenie", `${Math.round(activity.totalElevationGain)} m`),
     );
+  }
+
+  if (PERSONAL_RECORD_ACTIVITY_TYPES.has(activity.sportType)) {
+    const personalRecords = activity.bestEfforts.flatMap((effort) =>
+      effort.prRank === undefined
+        ? []
+        : [
+            `${PERSONAL_RECORD_MEDALS[effort.prRank]} ${effort.name} — ${formatDuration(effort.elapsedTime)}`,
+          ],
+    );
+    if (personalRecords.length > 0) {
+      fields.push({
+        name: "Rekordy osobiste",
+        value: personalRecords.join("\n"),
+        inline: false,
+      });
+    }
   }
 
   const image =

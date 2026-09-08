@@ -34,6 +34,21 @@ const polylineMapSchema = z
     summaryPolyline: map.summary_polyline || undefined,
   }));
 
+const bestEffortSchema = z
+  .object({
+    name: nonEmptyString,
+    elapsed_time: z.number().int().nonnegative(),
+    pr_rank: z
+      .union([z.literal(1), z.literal(2), z.literal(3)])
+      .nullable()
+      .optional(),
+  })
+  .transform((effort) => ({
+    name: effort.name,
+    elapsedTime: effort.elapsed_time,
+    prRank: effort.pr_rank ?? undefined,
+  }));
+
 const stravaActivitySchema = z
   .object({
     id: z.number().int().nonnegative(),
@@ -46,6 +61,7 @@ const stravaActivitySchema = z
     average_speed: z.number().finite().optional(),
     start_date: nonEmptyString,
     map: polylineMapSchema.nullable().optional(),
+    best_efforts: z.array(bestEffortSchema).nullable().optional(),
   })
   .transform((activity, context): StravaActivity => {
     const sportType = activity.sport_type ?? activity.type;
@@ -68,6 +84,7 @@ const stravaActivitySchema = z
       averageSpeed: activity.average_speed,
       startDate: activity.start_date,
       map: activity.map ?? undefined,
+      bestEfforts: activity.best_efforts ?? [],
     };
   });
 
@@ -164,7 +181,16 @@ export async function getStravaActivity(input: {
     throw new Error(`Strava did not return the activity: ${response.status}.`);
   }
 
-  return stravaActivitySchema.parse(await response.json());
+  const responseBody = await response.text();
+  console.log(
+    JSON.stringify({
+      message: "Received raw Strava activity API response.",
+      activityId: input.activityId,
+      responseBody,
+    }),
+  );
+
+  return stravaActivitySchema.parse(JSON.parse(responseBody));
 }
 
 export async function revokeStravaAuthorization(input: {

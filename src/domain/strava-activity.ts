@@ -4,6 +4,14 @@ interface PolylineMap {
   readonly summaryPolyline: string | undefined;
 }
 
+export type PersonalRecordRank = 1 | 2 | 3;
+
+export interface StravaBestEffort {
+  readonly name: string;
+  readonly elapsedTime: number;
+  readonly prRank: PersonalRecordRank | undefined;
+}
+
 export interface StravaActivity {
   readonly id: number;
   readonly name: string;
@@ -14,4 +22,5 @@ export interface StravaActivity {
   readonly averageSpeed: number | undefined;
   readonly startDate: string;
   readonly map: PolylineMap | undefined;
+  readonly bestEfforts: readonly StravaBestEffort[];
 }
