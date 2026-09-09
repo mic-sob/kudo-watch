@@ -39,7 +39,7 @@ source mapping between SQS and the activity worker.
 
 The [`github`](github/README.md) stack creates the restricted AWS IAM role used
 by GitHub Actions through OIDC. Pushes to `main` build the application and
-produce a Terraform plan. Pushing any tag repeats those checks and applies the
+produce a Terraform plan. Pushing a `v*` tag repeats those checks and applies the
 saved plan automatically.
 
 ## Application secret value
@@ -54,7 +54,8 @@ following JSON object:
   "discordWebhookUrl": "...",
   "stravaClientId": "...",
   "stravaClientSecret": "...",
-  "stravaWebhookVerifyToken": "..."
+  "stravaWebhookVerifyToken": "...",
+  "geoapifyApiKey": "..."
 }
 ```
 

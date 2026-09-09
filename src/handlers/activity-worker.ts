@@ -1,7 +1,7 @@
 import type { SQSBatchResponse, SQSEvent } from "aws-lambda";
 import { isDiscordGuildMember } from "../clients/discord-client.js";
 import { publishDiscordActivity } from "../clients/discord-webhook-client.js";
-import { getStadiaActivityMap } from "../clients/stadia-maps-client.js";
+import { getGeoapifyActivityMap } from "../clients/geoapify-maps-client.js";
 import {
   getStravaActivity,
   revokeStravaAuthorization,
@@ -77,13 +77,24 @@ async function processRecord(body: string): Promise<void> {
 
     const polyline =
       activity.map?.polyline ?? activity.map?.summaryPolyline;
-    const mapImage =
-      polyline === undefined
-        ? undefined
-        : await getStadiaActivityMap({
-            apiKey: secrets.stadiaMapsApiKey,
+    let mapImage: ArrayBuffer | undefined;
+    if (polyline) {
+      if (secrets.geoapifyApiKey === undefined) {
+        console.warn("Geoapify API key is missing; publishing without a map.");
+      } else {
+        try {
+          mapImage = await getGeoapifyActivityMap({
+            apiKey: secrets.geoapifyApiKey,
             polyline,
           });
+        } catch {
+          // Fetch errors can include the URL containing the API key.
+          console.warn(
+            `Failed to fetch the map for activity ${event.object_id}; publishing without a map.`,
+          );
+        }
+      }
+    }
 
     await publishDiscordActivity({
       webhookUrl: secrets.discordWebhookUrl,

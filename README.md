@@ -84,7 +84,7 @@ Set the secret value manually as the following JSON object:
   "stravaClientId": "...",
   "stravaClientSecret": "...",
   "stravaWebhookVerifyToken": "...",
-  "stadiaMapsApiKey": "..."
+  "geoapifyApiKey": "..."
 }
 ```
 
@@ -98,7 +98,29 @@ The fields contain:
 | `stravaClientId` | Strava API application settings, **Client ID** |
 | `stravaClientSecret` | Strava API application settings, **Client Secret** |
 | `stravaWebhookVerifyToken` | A random value generated for webhook verification |
-| `stadiaMapsApiKey` | Stadia Maps client dashboard, **Authentication Configuration → API key** |
+| `geoapifyApiKey` | Optional: [Geoapify project dashboard](https://myprojects.geoapify.com/), project API key |
+
+### Activity maps
+
+The worker uses [Geoapify Static Maps](https://apidocs.geoapify.com/docs/maps/static/)
+to render the Strava route as an 800×450 map at 2× scale, with the default
+Geoapify and map-data attribution. Routes are sent as precision-5 polylines
+in a POST body so detailed activities do not exceed URL length limits.
+
+As checked on September 9, 2026, the [Free plan](https://www.geoapify.com/pricing/)
+includes 3,000 credits per day without a credit card. Each map consumes
+1 credit plus the tile cost, so this is not a limit of 3,000 maps per day.
+
+When migrating from Stadia Maps, add `geoapifyApiKey` to the existing AWS
+Secrets Manager JSON, remove `stadiaMapsApiKey`, then build and deploy the
+Lambda packages. Keep the other credentials unchanged. Secrets are cached
+per Lambda execution environment; changing only the secret requires fresh
+Lambda environments for the new value to take effect.
+
+Without a Geoapify key, or if the map request fails (including quota exhaustion
+or a timeout), the worker logs a warning and publishes the activity without
+an image. Such an activity is marked as published and its map is not retried.
+Activities without a route do not call Geoapify.
 
 Generate a webhook verification token with:
 
@@ -235,7 +257,7 @@ authorizes that access.
 - The Discord interaction handler performs external work before sending its
   initial response. Cold starts or a slow Discord API response can exceed
   Discord's response deadline.
-- Automated tests and CI are not included in the alpha release.
+- Geoapify client tests run with `pnpm test` and in CI before deployment.
 
 ## Operational notes
 

@@ -1,6 +1,6 @@
 {
   "name": "kudowatch",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "license": "MIT",
   "type": "module",
@@ -15,7 +15,8 @@
     "clean": "node scripts/clean.mjs",
     "discord:register": "node scripts/register-discord-command.mjs",
     "strava:webhook:register": "node scripts/register-strava-webhook.mjs",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "node --test tests/*.test.mjs"
   },
   "devDependencies": {
     "@types/aws-lambda": "8.10.162",
